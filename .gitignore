@@ -1,0 +1,5 @@
+# Local secrets
+mongodb.env
+
+# Personal interview preparation is not part of the project submission
+personal-notes/

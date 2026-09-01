@@ -1,0 +1,19 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: azurefile-csi-nfs
+provisioner: file.csi.azure.com
+parameters:
+  resourceGroup: hmezouarRG
+  storageAccount: sthmezouarnfs
+  skuName: Premium_LRS
+  protocol: nfs
+  server: sthmezouarnfs.file.core.windows.net
+  mountPermissions: "0777"
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+mountOptions:
+  - nconnect=4
+  - noresvport
+  - actimeo=30

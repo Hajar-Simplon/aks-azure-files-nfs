@@ -1,11 +1,12 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mongodb-data
+  name: azurefiles-nfs-test
+  namespace: mongodb
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   storageClassName: azurefile-csi-nfs
   resources:
     requests:
-      storage: 100Gi
+      storage: 10Gi

@@ -3,11 +3,11 @@ kind: Kustomization
 namespace: mongodb
 resources:
   - namespace.yaml
-  - pvc.yaml
+  - storageclass.yaml
+  - pvc-mongodb.yaml
   - deployment.yaml
   - service.yaml
 secretGenerator:
   - name: mongodb-secret
-    literals:
-      - username=admin
-      - password=ChangeMe_Str0ng!
+    envs:
+      - mongodb.env
