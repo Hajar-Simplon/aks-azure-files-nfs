@@ -17,6 +17,20 @@ Kubernetes dynamically provisions the share through the AKS-native Azure Files C
 - A MongoDB document survived deletion and replacement of the pod.
 - The storage account's public network access is disabled.
 
+### Evidence included in this repository
+
+| Brief requirement | Evidence |
+|---|---|
+| AKS access and Azure Files CSI driver | Figure 1: Ready AKS node, registered CSI driver and running Azure Files node component |
+| Private connectivity to Azure Files | Figure 2: approved `file` private endpoint |
+| Private DNS resolution from AKS | Figure 3: storage hostname resolves to private IP `10.224.0.5` |
+| Dynamic provisioning | Figure 4: StorageClass, PVCs and PVs in `Bound` state |
+| NFS shares visible in Azure | Figure 5: two dynamically provisioned `100Gi` NFS shares |
+| MongoDB volume mounted at `/data/db` | Figure 6: Azure Files NFS mount shown by `df -h` |
+| MongoDB data persistence | Figure 7: persisted document returned from the replacement pod |
+
+Together, these captures demonstrate the complete path from Kubernetes storage provisioning to data surviving a MongoDB pod replacement.
+
 ## 3. Resources
 
 | Resource | Name | Purpose |
@@ -72,9 +86,12 @@ Observed results:
 
 - the AKS node was `Ready`;
 - `file.csi.azure.com` was registered;
-- `csi-azurefile-controller` and `csi-azurefile-node` pods were `Running`.
+- the Azure Files CSI node component was `Running`;
+- successful dynamic provisioning later confirmed that the CSI controller was operational.
 
-Screenshot placeholder: `docs/images/01-aks-csi-driver.png`
+**Figure 1 — AKS node, registered CSI drivers and running Azure Files CSI node component.**
+
+![AKS node, CSI drivers and Azure Files node component](images/01-aks-csi-driver.png)
 
 ## 6. Azure Files storage account
 
@@ -92,7 +109,7 @@ The `sthmezouarnfs` storage account was created with:
 
 The existing `sthmezouarfiles` account was not reused because it is a Standard `StorageV2` account and already contains the unrelated `company-data` share.
 
-Screenshot placeholder: `docs/images/02-storage-account-overview.png`
+The Azure Portal overview was also verified. Any submitted Portal capture must hide the subscription identifier.
 
 ## 7. Private networking and DNS
 
@@ -119,12 +136,13 @@ PublicNetworkAccess: Disabled
 DefaultAction: Deny
 ```
 
-Screenshot placeholders:
+**Figure 2 — Azure Files private endpoint in the `Approved` state.**
 
-- `docs/images/03-private-endpoint.png`
-- `docs/images/04-private-dns.png`
-- `docs/images/05-dns-test-from-aks.png`
-- `docs/images/06-public-access-disabled.png`
+![Approved Azure Files private endpoint](images/03-private-endpoint.png)
+
+**Figure 3 — DNS lookup executed inside AKS, resolving Azure Files to private IP `10.224.0.5`.**
+
+![Private DNS resolution from an AKS pod](images/04-private-dns-from-aks.png)
 
 ## 8. NFS StorageClass
 
@@ -168,11 +186,13 @@ Although Kubernetes accepted a `10Gi` request, Azure Files Premium provisioned i
 
 The pod in `tests/pod-test.yaml` mounted the claim at `/mnt/azure`. The `proof.txt` file remained available after deleting and recreating the pod.
 
-Screenshot placeholders:
+**Figure 4 — StorageClass and dynamically provisioned PVC/PV resources in the `Bound` state.**
 
-- `docs/images/07-pvc-test-bound.png`
-- `docs/images/08-nfs-share-created.png`
-- `docs/images/09-test-file-persistence.png`
+![StorageClass, bound PVCs and dynamically created PVs](images/05-pvc-pv-bound.png)
+
+**Figure 5 — Azure control-plane view of the two CSI-created `100Gi` NFS shares.**
+
+![Dynamically provisioned NFS shares in Azure](images/06-azure-nfs-shares.png)
 
 ## 10. MongoDB deployment
 
@@ -215,11 +235,9 @@ sthmezouarnfs.file.core.windows.net:/sthmezouarnfs/pvcn-c0a0fd1e-c200-4aff-8361-
 100G  300M  100G  1%  /data/db
 ```
 
-Screenshot placeholders:
+**Figure 6 — Running MongoDB pod with the Azure Files NFS share mounted on `/data/db`.**
 
-- `docs/images/10-mongodb-pvc-bound.png`
-- `docs/images/11-mongodb-running.png`
-- `docs/images/12-data-db-mount.png`
+![MongoDB pod and Azure Files mount on data/db](images/07-mongodb-mount.png)
 
 ## 11. MongoDB persistence proof
 
@@ -251,11 +269,9 @@ The changed name and UID prove that Kubernetes created a new pod. The new pod re
 
 **Conclusion: MongoDB data is persisted in Azure Files and is independent of the pod lifecycle.**
 
-Screenshot placeholders:
+**Figure 7 — Replacement MongoDB pod returning the document created before pod deletion.**
 
-- `docs/images/13-document-before-deletion.png`
-- `docs/images/14-old-pod-deleted.png`
-- `docs/images/15-new-pod-and-document.png`
+![MongoDB document available from the current pod](images/08-mongodb-persistence-proof.png)
 
 ## 12. Mounting issue and resolution
 
@@ -285,7 +301,7 @@ Network security remains enforced through the private endpoint and disabled publ
 
 - Public network access to `sthmezouarnfs` is disabled.
 - NFS access is primarily authorized at the network level.
-- The password currently present in `kustomization.yaml` is a lab value and must be replaced before real use.
+- MongoDB credentials are generated from the ignored `kubernetes/mongodb.env` file. Only the safe `mongodb.env.example` template is committed.
 - MongoDB runs with one replica. Independent MongoDB instances must not write directly into the same data directory without a correctly configured replica set.
 - `ReadWriteMany` describes an Azure Files capability; it does not automatically make MongoDB safe for multiple writers.
 - Subscription identifiers, passwords, access keys, connection strings and tokens must be hidden in screenshots.
